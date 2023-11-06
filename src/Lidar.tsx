@@ -1,4 +1,4 @@
-import { useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef, useEffect, MutableRefObject } from "react";
 import {
   WebGLRenderTarget,
@@ -80,20 +80,7 @@ const Lidar = ({
     [lidarDirection, points]
   );
 
-  useEffect(() => {
-    if (instancedMeshRef.current) {
-      const temp = new Object3D();
-      for (let i = 0; i < frontPoints.length; i++) {
-        const point = frontPoints[i];
-        temp.position.set(point.x, point.y, point.z);
-        temp.updateMatrix();
-        instancedMeshRef.current.setMatrixAt(i, temp.matrix);
-      }
-      instancedMeshRef.current.instanceMatrix.needsUpdate = true;
-    }
-  }, [frontPoints]);
-
-  const { gl, scene } = useThree();
+  const { gl, scene, camera } = useThree();
 
   const renderTarget = useMemo(
     () => new WebGLRenderTarget(resolution, resolution),
@@ -122,6 +109,20 @@ const Lidar = ({
     }
   }, [gl, renderTarget, resolution, scene, rotation, position]);
 
+  useFrame(() => {
+    if (instancedMeshRef.current) {
+      const temp = new Object3D();
+      for (let i = 0; i < frontPoints.length; i++) {
+        const point = frontPoints[i];
+        temp.position.set(point.x, point.y, point.z);
+        temp.updateMatrix();
+        temp.quaternion.copy(camera.quaternion);
+        instancedMeshRef.current.setMatrixAt(i, temp.matrix);
+      }
+      instancedMeshRef.current.instanceMatrix.needsUpdate = true;
+    }
+  });
+
   useHelper(
     debug ? (cameraRef as MutableRefObject<PerspectiveCamera>) : false,
     CameraHelper
@@ -147,7 +148,7 @@ const Lidar = ({
         ref={instancedMeshRef}
         args={[undefined, undefined, points.length]}
       >
-        <sphereGeometry args={[0.0125, 8, 8]} />
+        <planeGeometry args={[0.0125, 0.0125]} />
       </instancedMesh>
     </>
   );
