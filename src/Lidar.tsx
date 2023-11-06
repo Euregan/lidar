@@ -20,28 +20,34 @@ type LidarProps = {
   resolution: number;
   position: Vector3;
   rotation: Euler;
+  debug?: boolean;
 };
 
-const Lidar = ({ resolution, position, rotation }: LidarProps) => {
+const Lidar = ({
+  resolution,
+  position,
+  rotation,
+  debug = false,
+}: LidarProps) => {
   const instancedMeshRef =
     useRef<InstancedMesh<BufferGeometry<NormalBufferAttributes>, Material>>(
       null
     );
   const cameraRef = useRef<PerspectiveCamera>(null);
 
-  const lidar = useMemo(
-    () =>
-      new SphereGeometry(
-        1,
-        resolution,
-        resolution,
-        0,
-        Math.PI * 2,
-        Math.PI * 0.25,
-        Math.PI - Math.PI * 0.4
-      ),
-    [resolution]
-  );
+  const lidar = useMemo(() => {
+    const lidar = new SphereGeometry(
+      1,
+      resolution,
+      resolution,
+      0,
+      Math.PI * 2,
+      Math.PI * 0.25,
+      Math.PI - Math.PI * 0.4
+    );
+    lidar.rotateZ(Math.PI * 0.5);
+    return lidar;
+  }, [resolution]);
 
   const points = useMemo(() => {
     const points: Array<Vector3> = [];
@@ -89,12 +95,14 @@ const Lidar = ({ resolution, position, rotation }: LidarProps) => {
 
   const { gl, scene } = useThree();
 
+  const renderTarget = useMemo(
+    () => new WebGLRenderTarget(resolution, resolution),
+    [resolution]
+  );
+
   useEffect(() => {
     if (cameraRef.current) {
-      const resolution = 512;
       const depthMaterial = new MeshDepthMaterial();
-
-      const renderTarget = new WebGLRenderTarget(resolution, resolution);
 
       scene.overrideMaterial = depthMaterial;
       gl.setRenderTarget(renderTarget);
@@ -111,26 +119,29 @@ const Lidar = ({ resolution, position, rotation }: LidarProps) => {
         resolution,
         depthValues
       );
-
-      console.log(
-        depthValues
-          .filter((_, index) => (index + 1) % 4 === 0)
-          .filter((value) => value !== 0)
-          .filter((value) => value !== 255)
-      );
     }
-  }, [gl, scene]);
+  }, [gl, renderTarget, resolution, scene, rotation, position]);
 
-  useHelper(cameraRef as MutableRefObject<PerspectiveCamera>, CameraHelper);
+  useHelper(
+    debug ? (cameraRef as MutableRefObject<PerspectiveCamera>) : false,
+    CameraHelper
+  );
 
   return (
     <>
       <perspectiveCamera
         ref={cameraRef}
-        args={[45, 1, 0.5, 5]}
+        args={[45, 1, 0.5, 4.2]}
         position={position}
         rotation={rotation}
       />
+
+      {debug && (
+        <mesh position={position} rotation={rotation}>
+          <planeGeometry />
+          <meshBasicMaterial map={renderTarget.texture} />
+        </mesh>
+      )}
 
       <instancedMesh
         ref={instancedMeshRef}
