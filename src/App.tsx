@@ -1,37 +1,27 @@
-import { useRef } from "react";
-import {
-  BufferGeometry,
-  Material,
-  Mesh,
-  NormalBufferAttributes,
-  Object3DEventMap,
-  BackSide,
-} from "three";
+import { BackSide, Vector3, Euler } from "three";
 import { Canvas } from "@react-three/fiber";
 import { Box, OrbitControls } from "@react-three/drei";
 import Lidar from "./Lidar";
 
 const Scene = () => {
-  const walls =
-    useRef<
-      Mesh<BufferGeometry<NormalBufferAttributes>, Material, Object3DEventMap>
-    >(null);
-  const box =
-    useRef<
-      Mesh<BufferGeometry<NormalBufferAttributes>, Material, Object3DEventMap>
-    >(null);
+  const lidarPosition = new Vector3(0, 0, 0);
+  const lidarRotation = new Euler(0, Math.PI, 0);
 
   return (
     <>
-      <Box ref={box} position={[-2, 0, -1]}>
-        <meshBasicMaterial opacity={0} transparent />
+      <Box position={[-2, 0, -1]}>
+        <meshBasicMaterial color="darkblue" />
       </Box>
 
-      <Box ref={walls} args={[10, 1, 8]}>
-        <meshBasicMaterial side={BackSide} opacity={0} transparent />
+      <Box position={[1, 0, 2]}>
+        <meshBasicMaterial color="darkred" />
       </Box>
 
-      <Lidar refs={[walls, box]} />
+      <Box args={[10, 1, 8]}>
+        <meshBasicMaterial color="darkgreen" side={BackSide} />
+      </Box>
+
+      <Lidar resolution={8} position={lidarPosition} rotation={lidarRotation} />
     </>
   );
 };
