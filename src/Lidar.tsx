@@ -13,6 +13,8 @@ import {
   NormalBufferAttributes,
   Material,
   Object3D,
+  Vector4,
+  Color,
 } from "three";
 import { useHelper } from "@react-three/drei";
 
@@ -78,13 +80,17 @@ const Lidar = ({
     [resolution]
   );
 
-  const [frontPoints, setFrontPoints] = useState<Array<Vector3>>([]);
+  const [frontPoints, setFrontPoints] = useState<Array<Vector4>>([]);
 
   useEffect(() => {
     // This is where we update the LIDAR points position
     if (depthCameraRef.current) {
       const depthMaterial = new MeshDepthMaterial();
 
+      // If there are LIDAR points projected, we remove them so they don't get their depth calculated
+      if (instancedMeshRef.current) {
+        instancedMeshRef.current.count = 0;
+      }
       scene.overrideMaterial = depthMaterial;
       gl.setRenderTarget(renderTarget);
       gl.render(scene, depthCameraRef.current);
@@ -101,7 +107,7 @@ const Lidar = ({
         depthValues
       );
 
-      const frontPoints: Array<Vector3> = points.reduce((points, point) => {
+      const frontPoints: Array<Vector4> = points.reduce((points, point) => {
         // For now, we only keep the points in the front quadran
         const horizontalAngle = lidarDirection.angleTo(
           new Vector3(point.x, 0, point.z)
@@ -138,9 +144,9 @@ const Lidar = ({
         if (depth === 0) {
           return debug
             ? points.concat(
-                new Vector3(
+                new Vector4(
                   xOnDepthCameraNearPlane * -1,
-                  yOnDepthCameraNearPlane * -1,
+                  yOnDepthCameraNearPlane,
                   0
                 )
               )
@@ -150,13 +156,14 @@ const Lidar = ({
         const length = (1 - depth / 255) * range - size;
 
         return points.concat(
-          new Vector3(
+          new Vector4(
             Math.sin(horizontalAngle) * length,
             Math.sin(verticalAngle) * verticalDirection * length,
-            length
+            length,
+            1 - depth / 255
           )
         );
-      }, [] as Array<Vector3>);
+      }, [] as Array<Vector4>);
 
       setFrontPoints(frontPoints);
     }
@@ -194,9 +201,16 @@ const Lidar = ({
         temp.updateMatrix();
         temp.quaternion.copy(camera.quaternion);
         instancedMeshRef.current.setMatrixAt(i, temp.matrix);
+        instancedMeshRef.current.setColorAt(
+          i,
+          new Color(0, point.w, 1 - point.w)
+        );
       }
 
       instancedMeshRef.current.instanceMatrix.needsUpdate = true;
+      if (instancedMeshRef.current.instanceColor) {
+        instancedMeshRef.current.instanceColor.needsUpdate = true;
+      }
     }
   });
 
@@ -226,6 +240,7 @@ const Lidar = ({
         frustumCulled={false}
       >
         <planeGeometry args={[0.0125, 0.0125]} />
+        <meshBasicMaterial />
       </instancedMesh>
     </>
   );

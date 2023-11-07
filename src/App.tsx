@@ -1,6 +1,6 @@
-import { BackSide, Vector3, Euler } from "three";
+import { Vector3, Euler } from "three";
 import { Canvas } from "@react-three/fiber";
-import { Box, OrbitControls } from "@react-three/drei";
+import { Box, OrbitControls, Plane } from "@react-three/drei";
 import Lidar from "./Lidar";
 import { useControls } from "leva";
 
@@ -30,14 +30,17 @@ const Scene = () => {
         />
       </Box>
 
-      <Box args={[10, 4, 8]}>
+      <Plane
+        args={[10, 10]}
+        rotation={[Math.PI * 1.5, 0, 0]}
+        position={[0, -0.75, 0]}
+      >
         <meshBasicMaterial
           color="darkgreen"
-          side={BackSide}
           opacity={debug ? 1 : 0}
           transparent
         />
-      </Box>
+      </Plane>
 
       <Lidar
         resolution={64}
