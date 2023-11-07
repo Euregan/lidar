@@ -53,11 +53,15 @@ const Scene = () => {
         rotation={[Math.PI * 0.75, 0, 0]}
         position={[0, -0.75, 5]}
       >
-        <meshBasicMaterial
-          color="darkgreen"
-          opacity={debug ? 1 : 0}
-          transparent
-        />
+        <meshBasicMaterial color="red" opacity={debug ? 1 : 0} transparent />
+      </Plane>
+
+      <Plane
+        args={[10, 10]}
+        rotation={[0, Math.PI * 0.5, 0]}
+        position={[-1, -0.75, 5]}
+      >
+        <meshBasicMaterial color="green" opacity={debug ? 1 : 0} transparent />
       </Plane>
 
       <Lidar
