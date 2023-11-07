@@ -119,7 +119,7 @@ const Lidar = ({
         }
 
         const horizontalDirection = point.x > position.x ? -1 : 1;
-        const verticalDirection = point.y > position.y ? 1 : -1;
+        const verticalDirection = point.y > position.y ? -1 : 1;
 
         const xOnDepthCameraNearPlane =
           Math.sin(horizontalAngle) *
@@ -139,9 +139,8 @@ const Lidar = ({
           return debug
             ? points.concat(
                 new Vector3(
-                  // TODO: Figure out why the hell I need to invert this only here
                   xOnDepthCameraNearPlane * -1,
-                  yOnDepthCameraNearPlane,
+                  yOnDepthCameraNearPlane * -1,
                   0
                 )
               )
@@ -150,7 +149,13 @@ const Lidar = ({
 
         const length = (1 - depth / 255) * range - size;
 
-        return points.concat(point.setLength(length));
+        return points.concat(
+          new Vector3(
+            Math.sin(horizontalAngle) * length,
+            Math.sin(verticalAngle) * verticalDirection * length,
+            length
+          )
+        );
       }, [] as Array<Vector3>);
 
       setFrontPoints(frontPoints);
@@ -218,6 +223,7 @@ const Lidar = ({
       <instancedMesh
         ref={instancedMeshRef}
         args={[undefined, undefined, points.length]}
+        frustumCulled={false}
       >
         <planeGeometry args={[0.0125, 0.0125]} />
       </instancedMesh>
