@@ -5,8 +5,14 @@ import Lidar from "./Lidar";
 import { useControls } from "leva";
 
 const Scene = () => {
-  const { debug } = useControls({
+  const { debug, lidarResolution } = useControls({
     debug: true,
+    lidarResolution: {
+      label: "Lidar resolution",
+      min: 8,
+      max: 2048,
+      value: 64,
+    },
   });
 
   const lidarPosition = new Vector3(0, 0, 0);
@@ -43,7 +49,7 @@ const Scene = () => {
       </Plane>
 
       <Lidar
-        resolution={64}
+        resolution={lidarResolution}
         position={lidarPosition}
         rotation={lidarRotation}
         size={0.5}
