@@ -153,11 +153,11 @@ const Lidar = ({
 
         const offset = x * 4 + y * resolution * 4;
         const depth =
-          depthValues[offset] * (255 / 256 / (256 * 256 * 256)) +
-          depthValues[offset + 1] * (255 / 256 / (256 * 256)) +
-          depthValues[offset + 2] * (255 / 256 / 256);
+          depthValues[offset] * (256 / 256 / (256 * 256 * 256)) +
+          depthValues[offset + 1] * (256 / 256 / (256 * 256)) +
+          depthValues[offset + 2] * (256 / 256 / 256);
 
-        if (depth === 0) {
+        if (!depth || depth === 0) {
           return debug
             ? points.concat(
                 new Vector4(
@@ -169,7 +169,11 @@ const Lidar = ({
             : points;
         }
 
-        const length = (1 - depth) * range - size;
+        const length = (1 - depth) * (range - size) + size;
+
+        if (length > range) {
+          console.log(length, range, size);
+        }
 
         return points.concat(
           new Vector4(
@@ -219,7 +223,7 @@ const Lidar = ({
         instancedMeshRef.current.setMatrixAt(i, temp.matrix);
         instancedMeshRef.current.setColorAt(
           i,
-          new Color(0, point.w, 1 - point.w)
+          new Color(0, 1 - point.w, point.w)
         );
       }
 
@@ -244,7 +248,7 @@ const Lidar = ({
           <planeGeometry />
           <meshBasicMaterial
             map={renderTarget.texture}
-            opacity={0.9}
+            opacity={0.8}
             transparent
           />
         </mesh>

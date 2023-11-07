@@ -20,7 +20,11 @@ const Scene = () => {
 
   return (
     <>
-      <Box position={[-2, 0, -1]}>
+      <Box args={[0.25, 0.25, 0.25]} position={[0, -0.5, 0.626]}>
+        <meshBasicMaterial color="purple" opacity={debug ? 1 : 0} transparent />
+      </Box>
+
+      <Box position={[1, 0.5, 1.5]}>
         <meshBasicMaterial
           color="darkblue"
           opacity={debug ? 1 : 0}
