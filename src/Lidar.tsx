@@ -157,7 +157,7 @@ const Lidar = ({
 
         return points.concat(
           new Vector4(
-            Math.sin(horizontalAngle) * length,
+            Math.sin(horizontalAngle) * horizontalDirection * length * -1,
             Math.sin(verticalAngle) * verticalDirection * length,
             length,
             1 - depth / 255

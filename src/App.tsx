@@ -11,7 +11,7 @@ const Scene = () => {
       label: "Lidar resolution",
       min: 8,
       max: 2048,
-      value: 64,
+      value: 128,
     },
   });
 
@@ -40,6 +40,18 @@ const Scene = () => {
         args={[10, 10]}
         rotation={[Math.PI * 1.5, 0, 0]}
         position={[0, -0.75, 0]}
+      >
+        <meshBasicMaterial
+          color="darkgreen"
+          opacity={debug ? 1 : 0}
+          transparent
+        />
+      </Plane>
+
+      <Plane
+        args={[10, 10]}
+        rotation={[Math.PI * 0.75, 0, 0]}
+        position={[0, -0.75, 5]}
       >
         <meshBasicMaterial
           color="darkgreen"
