@@ -86,6 +86,18 @@ const Lidar = ({
     // This is where we update the LIDAR points position
     if (depthCameraRef.current) {
       const depthMaterial = new MeshDepthMaterial();
+      depthMaterial.onBeforeCompile = function (shader) {
+        // the <packing> GLSL chunk from three.js has the packDeathToRGBA function.
+        // then at the end of the shader the default MaterialBasicShader has
+        // already read from the material's `map` texture (the depthTexture)
+        // which has depth in 'r' and assigned it to gl_FragColor
+        shader.fragmentShader = shader.fragmentShader
+          .replace("#include <common>", "#include <common>")
+          .replace(
+            "#include <fog_fragment>",
+            "gl_FragColor = packDepthToRGBA( gl_FragColor.r );"
+          );
+      };
 
       // If there are LIDAR points projected, we remove them so they don't get their depth calculated
       if (instancedMeshRef.current) {
@@ -139,7 +151,11 @@ const Lidar = ({
         const x = Math.round((xOnDepthCameraNearPlane + 0.5) * resolution);
         const y = Math.round((yOnDepthCameraNearPlane + 0.5) * resolution);
 
-        const depth = depthValues[x * 4 + y * resolution * 4];
+        const offset = x * 4 + y * resolution * 4;
+        const depth =
+          depthValues[offset] * (255 / 256 / (256 * 256 * 256)) +
+          depthValues[offset + 1] * (255 / 256 / (256 * 256)) +
+          depthValues[offset + 2] * (255 / 256 / 256);
 
         if (depth === 0) {
           return debug
@@ -153,14 +169,14 @@ const Lidar = ({
             : points;
         }
 
-        const length = (1 - depth / 255) * range - size;
+        const length = (1 - depth) * range - size;
 
         return points.concat(
           new Vector4(
             Math.sin(horizontalAngle) * horizontalDirection * length * -1,
             Math.sin(verticalAngle) * verticalDirection * length,
             length,
-            1 - depth / 255
+            1 - depth
           )
         );
       }, [] as Array<Vector4>);
