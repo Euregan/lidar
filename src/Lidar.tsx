@@ -1,4 +1,4 @@
-import { useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef, useEffect, MutableRefObject, useState } from "react";
 import {
   WebGLRenderTarget,
@@ -8,6 +8,11 @@ import {
   MeshDepthMaterial,
   CameraHelper,
   Euler,
+  InstancedMesh,
+  BufferGeometry,
+  NormalBufferAttributes,
+  Material,
+  Object3D,
 } from "three";
 import { useHelper } from "@react-three/drei";
 
@@ -28,6 +33,10 @@ const Lidar = ({
   range,
   debug = false,
 }: LidarProps) => {
+  const instancedMeshRef =
+    useRef<InstancedMesh<BufferGeometry<NormalBufferAttributes>, Material>>(
+      null
+    );
   const depthCameraRef = useRef<PerspectiveCamera>(null);
 
   const lidarRadius = size / 2;
@@ -62,7 +71,7 @@ const Lidar = ({
 
   const lidarDirection = useMemo(() => new Vector3(0, 0, 1), []);
 
-  const { gl, scene, raycaster } = useThree();
+  const { gl, scene, raycaster, camera } = useThree();
 
   const renderTarget = useMemo(
     () => new WebGLRenderTarget(resolution, resolution),
@@ -167,6 +176,25 @@ const Lidar = ({
     CameraHelper
   );
 
+  // TODO: Replace this with a billboard vertex shader
+  useFrame(() => {
+    if (instancedMeshRef.current) {
+      const temp = new Object3D();
+
+      instancedMeshRef.current.count = frontPoints.length;
+
+      for (let i = 0; i < frontPoints.length; i++) {
+        const point = frontPoints[i];
+        temp.position.set(point.x, point.y, point.z);
+        temp.updateMatrix();
+        temp.quaternion.copy(camera.quaternion);
+        instancedMeshRef.current.setMatrixAt(i, temp.matrix);
+      }
+
+      instancedMeshRef.current.instanceMatrix.needsUpdate = true;
+    }
+  });
+
   return (
     <>
       <perspectiveCamera
@@ -187,11 +215,12 @@ const Lidar = ({
         </mesh>
       )}
 
-      {frontPoints.map((position, index) => (
-        <sprite key={index} position={position} scale={0.01}>
-          <spriteMaterial />
-        </sprite>
-      ))}
+      <instancedMesh
+        ref={instancedMeshRef}
+        args={[undefined, undefined, points.length]}
+      >
+        <planeGeometry args={[0.0125, 0.0125]} />
+      </instancedMesh>
     </>
   );
 };
