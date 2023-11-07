@@ -22,7 +22,7 @@ const Scene = () => {
         />
       </Box>
 
-      <Box position={[1, 0, 2]}>
+      <Box position={[1, -0.75, 2]}>
         <meshBasicMaterial
           color="darkred"
           opacity={debug ? 1 : 0}
@@ -30,7 +30,7 @@ const Scene = () => {
         />
       </Box>
 
-      <Box args={[10, 1, 8]}>
+      <Box args={[10, 4, 8]}>
         <meshBasicMaterial
           color="darkgreen"
           side={BackSide}
@@ -40,9 +40,11 @@ const Scene = () => {
       </Box>
 
       <Lidar
-        resolution={128}
+        resolution={64}
         position={lidarPosition}
         rotation={lidarRotation}
+        size={0.5}
+        range={4.2}
         debug={debug}
       />
     </>
