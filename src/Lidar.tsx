@@ -15,6 +15,7 @@ import {
   Object3D,
   Vector4,
   Color,
+  RGBADepthPacking,
 } from "three";
 import { useHelper } from "@react-three/drei";
 
@@ -85,19 +86,9 @@ const Lidar = ({
   useEffect(() => {
     // This is where we update the LIDAR points position
     if (depthCameraRef.current) {
-      const depthMaterial = new MeshDepthMaterial();
-      depthMaterial.onBeforeCompile = function (shader) {
-        // the <packing> GLSL chunk from three.js has the packDeathToRGBA function.
-        // then at the end of the shader the default MaterialBasicShader has
-        // already read from the material's `map` texture (the depthTexture)
-        // which has depth in 'r' and assigned it to gl_FragColor
-        shader.fragmentShader = shader.fragmentShader
-          .replace("#include <common>", "#include <common>")
-          .replace(
-            "#include <fog_fragment>",
-            "gl_FragColor = packDepthToRGBA( gl_FragColor.r );"
-          );
-      };
+      const depthMaterial = new MeshDepthMaterial({
+        depthPacking: RGBADepthPacking,
+      });
 
       // If there are LIDAR points projected, we remove them so they don't get their depth calculated
       if (instancedMeshRef.current) {
@@ -117,6 +108,17 @@ const Lidar = ({
         resolution,
         resolution,
         depthValues
+      );
+
+      const vec4 = new Vector4();
+      // Copied from the shader
+      const UnpackDownscale = 255 / 256;
+      const PackFactors = new Vector3(256 * 256 * 256, 256 * 256, 256);
+      const UnpackFactors = new Vector4(
+        UnpackDownscale / PackFactors.x,
+        UnpackDownscale / PackFactors.y,
+        UnpackDownscale / PackFactors.z,
+        UnpackDownscale / 1
       );
 
       const frontPoints: Array<Vector4> = points.reduce((points, point) => {
@@ -152,10 +154,15 @@ const Lidar = ({
         const y = Math.round((yOnDepthCameraNearPlane + 0.5) * resolution);
 
         const offset = x * 4 + y * resolution * 4;
-        const depth =
-          depthValues[offset] * (256 / 256 / (256 * 256 * 256)) +
-          depthValues[offset + 1] * (256 / 256 / (256 * 256)) +
-          depthValues[offset + 2] * (256 / 256 / 256);
+        // const depth =
+        //   depthValues[offset] * (256 / 256 / (256 * 256 * 256)) +
+        //   depthValues[offset + 1] * (256 / 256 / (256 * 256)) +
+        //   depthValues[offset + 2] * (256 / 256 / 256);
+
+        vec4
+          .fromArray(depthValues.slice(offset, offset + 4))
+          .multiplyScalar(1 / 255);
+        const depth = vec4.dot(UnpackFactors);
 
         if (!depth || depth === 0) {
           return debug
@@ -169,17 +176,17 @@ const Lidar = ({
             : points;
         }
 
-        const length = (1 - depth) * (range - size) + size;
+        const length = depth * (range - size) + size;
 
-        if (length > range) {
-          console.log(length, range, size);
-        }
+        const z = length;
+
+        console.log(depth, z, Math.pow(10, depth));
 
         return points.concat(
           new Vector4(
-            Math.sin(horizontalAngle) * horizontalDirection * length * -1,
-            Math.sin(verticalAngle) * verticalDirection * length,
-            length,
+            xOnDepthCameraNearPlane * -1,
+            yOnDepthCameraNearPlane,
+            z,
             1 - depth
           )
         );
