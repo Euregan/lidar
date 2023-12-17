@@ -5,7 +5,6 @@ import {
   PerspectiveCamera,
   SphereGeometry,
   Vector3,
-  MeshDepthMaterial,
   CameraHelper,
   Euler,
   InstancedMesh,
@@ -15,8 +14,108 @@ import {
   Object3D,
   Vector4,
   Color,
+  Scene,
+  WebGLRenderer,
+  ShaderMaterial,
 } from "three";
 import { useHelper } from "@react-three/drei";
+import vertexShader from "./lidar.vert.glsl";
+import fragmentShader from "./lidar.frag.glsl";
+
+const render = (
+  instancedMesh: InstancedMesh<
+    BufferGeometry<NormalBufferAttributes>,
+    Material
+  >,
+  depthCamera: PerspectiveCamera,
+  scene: Scene,
+  gl: WebGLRenderer,
+  renderTarget: WebGLRenderTarget,
+  resolution: number,
+  points: Array<Vector3>,
+  lidarDirection: Vector3,
+  size: number,
+  range: number,
+  position: Vector3
+): Array<Vector4> => {
+  const depthMaterial = new ShaderMaterial({
+    vertexShader,
+    fragmentShader,
+  });
+
+  // If there are LIDAR points projected, we remove them so they don't get their depth calculated
+  instancedMesh.count = 0;
+  scene.overrideMaterial = depthMaterial;
+  gl.setRenderTarget(renderTarget);
+  gl.render(scene, depthCamera);
+  gl.setRenderTarget(null);
+  scene.overrideMaterial = null;
+
+  const depthValues = new Uint8Array(resolution * resolution * 4);
+  gl.readRenderTargetPixels(
+    renderTarget,
+    0,
+    0,
+    resolution,
+    resolution,
+    depthValues
+  );
+
+  const coordinates = new Vector4();
+
+  return points.reduce((points, point) => {
+    // For now, we only keep the points in the front quadran
+    const horizontalAngle = lidarDirection.angleTo(
+      new Vector3(point.x, 0, point.z)
+    );
+    if (horizontalAngle > Math.PI * 0.25) {
+      return points;
+    }
+
+    const verticalAngle = lidarDirection.angleTo(
+      new Vector3(0, point.y, point.z)
+    );
+
+    if (verticalAngle > Math.PI * 0.25) {
+      return points;
+    }
+
+    const horizontalDirection = point.x > position.x ? -1 : 1;
+    const verticalDirection = point.y > position.y ? -1 : 1;
+
+    const xOnDepthCameraNearPlane =
+      Math.sin(horizontalAngle) *
+      (size / Math.cos(horizontalAngle)) *
+      horizontalDirection;
+    const yOnDepthCameraNearPlane =
+      Math.sin(verticalAngle) *
+      (size / Math.cos(verticalAngle)) *
+      verticalDirection;
+
+    const x = Math.round((xOnDepthCameraNearPlane + 0.5) * resolution);
+    const y = Math.round((yOnDepthCameraNearPlane + 0.5) * resolution);
+
+    const offset = x * 4 + y * resolution * 4;
+    coordinates
+      .fromArray(depthValues.slice(offset, offset + 4))
+      .divideScalar(255);
+
+    if (coordinates.z === 0) {
+      return points;
+    }
+
+    const length = coordinates.z * range + size;
+
+    return points.concat(
+      new Vector4(
+        Math.tan(horizontalAngle) * length * -horizontalDirection,
+        Math.tan(verticalAngle) * length * verticalDirection,
+        length,
+        coordinates.z
+      )
+    );
+  }, [] as Array<Vector4>);
+};
 
 type LidarProps = {
   resolution: number;
@@ -75,117 +174,31 @@ const Lidar = ({
 
   const { gl, scene, raycaster, camera } = useThree();
 
+  const [frontPoints, setFrontPoints] = useState<Array<Vector4>>([]);
+
   const renderTarget = useMemo(
     () => new WebGLRenderTarget(resolution, resolution),
     [resolution]
   );
 
-  const [frontPoints, setFrontPoints] = useState<Array<Vector4>>([]);
-
   useEffect(() => {
     // This is where we update the LIDAR points position
-    if (depthCameraRef.current) {
-      const depthMaterial = new MeshDepthMaterial();
-      depthMaterial.onBeforeCompile = function (shader) {
-        // the <packing> GLSL chunk from three.js has the packDeathToRGBA function.
-        // then at the end of the shader the default MaterialBasicShader has
-        // already read from the material's `map` texture (the depthTexture)
-        // which has depth in 'r' and assigned it to gl_FragColor
-        shader.fragmentShader = shader.fragmentShader
-          .replace("#include <common>", "#include <common>")
-          .replace(
-            "#include <fog_fragment>",
-            "gl_FragColor = packDepthToRGBA( gl_FragColor.r );"
-          );
-      };
-
-      // If there are LIDAR points projected, we remove them so they don't get their depth calculated
-      if (instancedMeshRef.current) {
-        instancedMeshRef.current.count = 0;
-      }
-      scene.overrideMaterial = depthMaterial;
-      gl.setRenderTarget(renderTarget);
-      gl.render(scene, depthCameraRef.current);
-      gl.setRenderTarget(null);
-      scene.overrideMaterial = null;
-
-      const depthValues = new Uint8Array(resolution * resolution * 4);
-      gl.readRenderTargetPixels(
-        renderTarget,
-        0,
-        0,
-        resolution,
-        resolution,
-        depthValues
+    if (depthCameraRef.current && instancedMeshRef.current) {
+      setFrontPoints(
+        render(
+          instancedMeshRef.current,
+          depthCameraRef.current,
+          scene,
+          gl,
+          renderTarget,
+          resolution,
+          points,
+          lidarDirection,
+          size,
+          range,
+          position
+        )
       );
-
-      const frontPoints: Array<Vector4> = points.reduce((points, point) => {
-        // For now, we only keep the points in the front quadran
-        const horizontalAngle = lidarDirection.angleTo(
-          new Vector3(point.x, 0, point.z)
-        );
-        if (horizontalAngle > Math.PI * 0.25) {
-          return points;
-        }
-
-        const verticalAngle = lidarDirection.angleTo(
-          new Vector3(0, point.y, point.z)
-        );
-
-        if (verticalAngle > Math.PI * 0.25) {
-          return points;
-        }
-
-        const horizontalDirection = point.x > position.x ? -1 : 1;
-        const verticalDirection = point.y > position.y ? -1 : 1;
-
-        const xOnDepthCameraNearPlane =
-          Math.sin(horizontalAngle) *
-          (size / Math.cos(horizontalAngle)) *
-          horizontalDirection;
-        const yOnDepthCameraNearPlane =
-          Math.sin(verticalAngle) *
-          (size / Math.cos(verticalAngle)) *
-          verticalDirection;
-
-        const x = Math.round((xOnDepthCameraNearPlane + 0.5) * resolution);
-        const y = Math.round((yOnDepthCameraNearPlane + 0.5) * resolution);
-
-        const offset = x * 4 + y * resolution * 4;
-        const depth =
-          depthValues[offset] * (256 / 256 / (256 * 256 * 256)) +
-          depthValues[offset + 1] * (256 / 256 / (256 * 256)) +
-          depthValues[offset + 2] * (256 / 256 / 256);
-
-        if (!depth || depth === 0) {
-          return debug
-            ? points.concat(
-                new Vector4(
-                  xOnDepthCameraNearPlane * -1,
-                  yOnDepthCameraNearPlane,
-                  0
-                )
-              )
-            : points;
-        }
-
-        const length = (1 - depth) * (range - size) + size;
-
-        if (length > range) {
-          console.log(length, range, size);
-        }
-
-        return points.concat(
-          new Vector4(
-            Math.sin(horizontalAngle) * horizontalDirection * length * -1,
-            Math.sin(verticalAngle) * verticalDirection * length,
-            length,
-            1 - depth
-          )
-        );
-      }, [] as Array<Vector4>);
-
-      setFrontPoints(frontPoints);
     }
   }, [
     gl,
@@ -242,17 +255,6 @@ const Lidar = ({
         position={position}
         rotation={rotation}
       />
-
-      {debug && (
-        <mesh position={position} rotation={rotation}>
-          <planeGeometry />
-          <meshBasicMaterial
-            map={renderTarget.texture}
-            opacity={0.8}
-            transparent
-          />
-        </mesh>
-      )}
 
       <instancedMesh
         ref={instancedMeshRef}
