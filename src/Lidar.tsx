@@ -64,18 +64,21 @@ const render = (
   const coordinates = new Vector4();
 
   return points.reduce((points, point) => {
-    // For now, we only keep the points in the front quadran
-    const horizontalAngle = lidarDirection.angleTo(
-      new Vector3(point.x, 0, point.z)
-    );
+    // We only keep the points in the front quadran
+    const horizontalAngle = new Vector3(
+      lidarDirection.x,
+      0,
+      lidarDirection.z
+    ).angleTo(new Vector3(point.x, 0, point.z));
     if (horizontalAngle > Math.PI * 0.25) {
       return points;
     }
 
-    const verticalAngle = lidarDirection.angleTo(
-      new Vector3(0, point.y, point.z)
-    );
-
+    const verticalAngle = new Vector3(
+      0,
+      lidarDirection.y,
+      lidarDirection.z
+    ).angleTo(new Vector3(0, point.y, point.z));
     if (verticalAngle > Math.PI * 0.25) {
       return points;
     }
@@ -100,17 +103,25 @@ const render = (
       .fromArray(depthValues.slice(offset, offset + 4))
       .divideScalar(255);
 
-    if (coordinates.z === 0) {
+    if (coordinates.z === 0 || coordinates.z === 1) {
       return points;
     }
 
-    const length = coordinates.z * range + size;
+    const distance = coordinates.z * range;
+    const angle = lidarDirection.angleTo(point);
+    const z = Math.cos(angle) * -distance;
+
+    const finalPointPosition = new Vector3(
+      -Math.tan(horizontalAngle) * z * horizontalDirection,
+      -Math.tan(verticalAngle) * z * verticalDirection,
+      z
+    ).applyQuaternion(depthCamera.quaternion);
 
     return points.concat(
       new Vector4(
-        Math.tan(horizontalAngle) * length * -horizontalDirection,
-        Math.tan(verticalAngle) * length * verticalDirection,
-        length,
+        finalPointPosition.x,
+        finalPointPosition.y,
+        finalPointPosition.z,
         coordinates.z
       )
     );
@@ -138,7 +149,8 @@ const Lidar = ({
     useRef<InstancedMesh<BufferGeometry<NormalBufferAttributes>, Material>>(
       null
     );
-  const depthCameraRef = useRef<PerspectiveCamera>(null);
+  const frontDepthCameraRef = useRef<PerspectiveCamera>(null);
+  const leftDepthCameraRef = useRef<PerspectiveCamera>(null);
 
   const lidarRadius = size / 2;
 
@@ -152,7 +164,7 @@ const Lidar = ({
       Math.PI * 0.25,
       Math.PI - Math.PI * 0.4
     );
-    // lidar.rotateZ(Math.PI * 0.5);
+
     return lidar;
   }, [lidarRadius, resolution]);
 
@@ -175,6 +187,7 @@ const Lidar = ({
   const { gl, scene, raycaster, camera } = useThree();
 
   const [frontPoints, setFrontPoints] = useState<Array<Vector4>>([]);
+  const [leftPoints, setLeftPoints] = useState<Array<Vector4>>([]);
 
   const renderTarget = useMemo(
     () => new WebGLRenderTarget(resolution, resolution),
@@ -183,11 +196,31 @@ const Lidar = ({
 
   useEffect(() => {
     // This is where we update the LIDAR points position
-    if (depthCameraRef.current && instancedMeshRef.current) {
+    if (
+      frontDepthCameraRef.current &&
+      leftDepthCameraRef.current &&
+      instancedMeshRef.current
+    ) {
       setFrontPoints(
         render(
           instancedMeshRef.current,
-          depthCameraRef.current,
+          frontDepthCameraRef.current,
+          scene,
+          gl,
+          renderTarget,
+          resolution,
+          points,
+          lidarDirection,
+          size,
+          range,
+          position
+        )
+      );
+
+      setLeftPoints(
+        render(
+          instancedMeshRef.current,
+          leftDepthCameraRef.current,
           scene,
           gl,
           renderTarget,
@@ -217,16 +250,22 @@ const Lidar = ({
   ]);
 
   useHelper(
-    debug ? (depthCameraRef as MutableRefObject<PerspectiveCamera>) : false,
+    debug
+      ? (frontDepthCameraRef as MutableRefObject<PerspectiveCamera>)
+      : false,
+    CameraHelper
+  );
+  useHelper(
+    debug ? (leftDepthCameraRef as MutableRefObject<PerspectiveCamera>) : false,
     CameraHelper
   );
 
-  // TODO: Replace this with a billboard vertex shader
+  // TODO: Replace part of this with a billboard vertex shader
   useFrame(() => {
     if (instancedMeshRef.current) {
       const temp = new Object3D();
 
-      instancedMeshRef.current.count = frontPoints.length;
+      instancedMeshRef.current.count = frontPoints.length + leftPoints.length;
 
       for (let i = 0; i < frontPoints.length; i++) {
         const point = frontPoints[i];
@@ -236,6 +275,20 @@ const Lidar = ({
         instancedMeshRef.current.setMatrixAt(i, temp.matrix);
         instancedMeshRef.current.setColorAt(
           i,
+          new Color(0, 1 - point.w, point.w)
+        );
+      }
+      for (let i = 0; i < leftPoints.length; i++) {
+        const point = leftPoints[i];
+        temp.position.set(point.x, point.y, point.z);
+        temp.updateMatrix();
+        temp.quaternion.copy(camera.quaternion);
+        instancedMeshRef.current.setMatrixAt(
+          frontPoints.length + i,
+          temp.matrix
+        );
+        instancedMeshRef.current.setColorAt(
+          frontPoints.length + i,
           new Color(0, 1 - point.w, point.w)
         );
       }
@@ -250,10 +303,16 @@ const Lidar = ({
   return (
     <>
       <perspectiveCamera
-        ref={depthCameraRef}
+        ref={frontDepthCameraRef}
         args={[90, 1, size, range]}
         position={position}
         rotation={rotation}
+      />
+      <perspectiveCamera
+        ref={leftDepthCameraRef}
+        args={[90, 1, size, range]}
+        position={position}
+        rotation={[rotation.x, rotation.y + Math.PI * 0.5, rotation.z]}
       />
 
       <instancedMesh
