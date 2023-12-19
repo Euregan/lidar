@@ -155,6 +155,8 @@ const Lidar = ({
   const leftDepthCameraRef = useRef<PerspectiveCamera>(null);
   const rightDepthCameraRef = useRef<PerspectiveCamera>(null);
   const backDepthCameraRef = useRef<PerspectiveCamera>(null);
+  const topDepthCameraRef = useRef<PerspectiveCamera>(null);
+  const bottomDepthCameraRef = useRef<PerspectiveCamera>(null);
 
   const lidarRadius = size / 2;
 
@@ -194,6 +196,8 @@ const Lidar = ({
   const [leftPoints, setLeftPoints] = useState<Array<Vector4>>([]);
   const [rightPoints, setRightPoints] = useState<Array<Vector4>>([]);
   const [backPoints, setBackPoints] = useState<Array<Vector4>>([]);
+  const [topPoints, setTopPoints] = useState<Array<Vector4>>([]);
+  const [bottomPoints, setBottomPoints] = useState<Array<Vector4>>([]);
 
   const renderTarget = useMemo(
     () => new WebGLRenderTarget(resolution, resolution),
@@ -207,6 +211,8 @@ const Lidar = ({
       leftDepthCameraRef.current &&
       rightDepthCameraRef.current &&
       backDepthCameraRef.current &&
+      topDepthCameraRef.current &&
+      bottomDepthCameraRef.current &&
       instancedMeshRef.current
     ) {
       setFrontPoints(
@@ -272,6 +278,38 @@ const Lidar = ({
           position
         )
       );
+
+      setTopPoints(
+        render(
+          instancedMeshRef.current,
+          topDepthCameraRef.current,
+          scene,
+          gl,
+          renderTarget,
+          resolution,
+          points,
+          lidarDirection,
+          size,
+          range,
+          position
+        )
+      );
+
+      setBottomPoints(
+        render(
+          instancedMeshRef.current,
+          bottomDepthCameraRef.current,
+          scene,
+          gl,
+          renderTarget,
+          resolution,
+          points,
+          lidarDirection,
+          size,
+          range,
+          position
+        )
+      );
     }
   }, [
     gl,
@@ -319,7 +357,9 @@ const Lidar = ({
         frontPoints.length +
         leftPoints.length +
         rightPoints.length +
-        backPoints.length;
+        backPoints.length +
+        topPoints.length +
+        bottomPoints.length;
 
       for (let i = 0; i < frontPoints.length; i++) {
         const point = frontPoints[i];
@@ -374,6 +414,52 @@ const Lidar = ({
           new Color(0, 1 - point.w, point.w)
         );
       }
+      for (let i = 0; i < topPoints.length; i++) {
+        const point = topPoints[i];
+        temp.position.set(point.x, point.y, point.z);
+        temp.updateMatrix();
+        temp.quaternion.copy(camera.quaternion);
+        instancedMeshRef.current.setMatrixAt(
+          frontPoints.length +
+            leftPoints.length +
+            rightPoints.length +
+            backPoints.length +
+            i,
+          temp.matrix
+        );
+        instancedMeshRef.current.setColorAt(
+          frontPoints.length +
+            leftPoints.length +
+            rightPoints.length +
+            backPoints.length +
+            i,
+          new Color(0, 1 - point.w, point.w)
+        );
+      }
+      for (let i = 0; i < bottomPoints.length; i++) {
+        const point = bottomPoints[i];
+        temp.position.set(point.x, point.y, point.z);
+        temp.updateMatrix();
+        temp.quaternion.copy(camera.quaternion);
+        instancedMeshRef.current.setMatrixAt(
+          frontPoints.length +
+            leftPoints.length +
+            rightPoints.length +
+            backPoints.length +
+            topPoints.length +
+            i,
+          temp.matrix
+        );
+        instancedMeshRef.current.setColorAt(
+          frontPoints.length +
+            leftPoints.length +
+            rightPoints.length +
+            backPoints.length +
+            topPoints.length +
+            i,
+          new Color(0, 1 - point.w, point.w)
+        );
+      }
 
       instancedMeshRef.current.instanceMatrix.needsUpdate = true;
       if (instancedMeshRef.current.instanceColor) {
@@ -407,6 +493,18 @@ const Lidar = ({
         args={[90, 1, size, range]}
         position={position}
         rotation={[rotation.x, rotation.y + Math.PI, rotation.z]}
+      />
+      <perspectiveCamera
+        ref={topDepthCameraRef}
+        args={[90, 1, size, range]}
+        position={position}
+        rotation={[rotation.x + Math.PI * -0.5, rotation.y, rotation.z]}
+      />
+      <perspectiveCamera
+        ref={bottomDepthCameraRef}
+        args={[90, 1, size, range]}
+        position={position}
+        rotation={[rotation.x + Math.PI * 0.5, rotation.y, rotation.z]}
       />
 
       <instancedMesh
