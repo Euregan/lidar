@@ -154,6 +154,7 @@ const Lidar = ({
   const frontDepthCameraRef = useRef<PerspectiveCamera>(null);
   const leftDepthCameraRef = useRef<PerspectiveCamera>(null);
   const rightDepthCameraRef = useRef<PerspectiveCamera>(null);
+  const backDepthCameraRef = useRef<PerspectiveCamera>(null);
 
   const lidarRadius = size / 2;
 
@@ -192,6 +193,7 @@ const Lidar = ({
   const [frontPoints, setFrontPoints] = useState<Array<Vector4>>([]);
   const [leftPoints, setLeftPoints] = useState<Array<Vector4>>([]);
   const [rightPoints, setRightPoints] = useState<Array<Vector4>>([]);
+  const [backPoints, setBackPoints] = useState<Array<Vector4>>([]);
 
   const renderTarget = useMemo(
     () => new WebGLRenderTarget(resolution, resolution),
@@ -204,6 +206,7 @@ const Lidar = ({
       frontDepthCameraRef.current &&
       leftDepthCameraRef.current &&
       rightDepthCameraRef.current &&
+      backDepthCameraRef.current &&
       instancedMeshRef.current
     ) {
       setFrontPoints(
@@ -253,6 +256,22 @@ const Lidar = ({
           position
         )
       );
+
+      setBackPoints(
+        render(
+          instancedMeshRef.current,
+          backDepthCameraRef.current,
+          scene,
+          gl,
+          renderTarget,
+          resolution,
+          points,
+          lidarDirection,
+          size,
+          range,
+          position
+        )
+      );
     }
   }, [
     gl,
@@ -286,6 +305,10 @@ const Lidar = ({
       : false,
     CameraHelper
   );
+  useHelper(
+    debug ? (backDepthCameraRef as MutableRefObject<PerspectiveCamera>) : false,
+    CameraHelper
+  );
 
   // TODO: Replace part of this with a billboard vertex shader
   useFrame(() => {
@@ -293,7 +316,10 @@ const Lidar = ({
       const temp = new Object3D();
 
       instancedMeshRef.current.count =
-        frontPoints.length + leftPoints.length + rightPoints.length;
+        frontPoints.length +
+        leftPoints.length +
+        rightPoints.length +
+        backPoints.length;
 
       for (let i = 0; i < frontPoints.length; i++) {
         const point = frontPoints[i];
@@ -326,11 +352,25 @@ const Lidar = ({
         temp.updateMatrix();
         temp.quaternion.copy(camera.quaternion);
         instancedMeshRef.current.setMatrixAt(
-          frontPoints.length + rightPoints.length + i,
+          frontPoints.length + leftPoints.length + i,
           temp.matrix
         );
         instancedMeshRef.current.setColorAt(
-          frontPoints.length + rightPoints.length + i,
+          frontPoints.length + leftPoints.length + i,
+          new Color(0, 1 - point.w, point.w)
+        );
+      }
+      for (let i = 0; i < backPoints.length; i++) {
+        const point = backPoints[i];
+        temp.position.set(point.x, point.y, point.z);
+        temp.updateMatrix();
+        temp.quaternion.copy(camera.quaternion);
+        instancedMeshRef.current.setMatrixAt(
+          frontPoints.length + leftPoints.length + rightPoints.length + i,
+          temp.matrix
+        );
+        instancedMeshRef.current.setColorAt(
+          frontPoints.length + leftPoints.length + rightPoints.length + i,
           new Color(0, 1 - point.w, point.w)
         );
       }
@@ -361,6 +401,12 @@ const Lidar = ({
         args={[90, 1, size, range]}
         position={position}
         rotation={[rotation.x, rotation.y + Math.PI * -0.5, rotation.z]}
+      />
+      <perspectiveCamera
+        ref={backDepthCameraRef}
+        args={[90, 1, size, range]}
+        position={position}
+        rotation={[rotation.x, rotation.y + Math.PI, rotation.z]}
       />
 
       <instancedMesh
