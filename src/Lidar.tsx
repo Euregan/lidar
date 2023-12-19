@@ -103,13 +103,13 @@ const render = (
       .fromArray(depthValues.slice(offset, offset + 4))
       .divideScalar(255);
 
-    if (coordinates.z === 0 || coordinates.z === 1) {
+    if (isNaN(coordinates.w) || coordinates.w === 0 || coordinates.w === 1) {
       return points;
     }
 
     const maxDistance =
       range / Math.cos(Math.PI * 0.25) / Math.cos(Math.PI * 0.25);
-    const distance = coordinates.z * maxDistance;
+    const distance = coordinates.w * maxDistance;
     const angle = lidarDirection.angleTo(point);
     const z = Math.cos(angle) * -distance;
 
@@ -124,7 +124,7 @@ const render = (
         finalPointPosition.x,
         finalPointPosition.y,
         finalPointPosition.z,
-        coordinates.z
+        coordinates.w
       )
     );
   }, [] as Array<Vector4>);
