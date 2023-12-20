@@ -96,11 +96,11 @@ const Scene = () => {
     lidarPosition: {
       label: "Lidar position",
       value: {
-        x: 0.5,
+        x: 0,
         y: 0,
       },
-      x: { step: 0.1 },
-      y: { step: 0.1 },
+      x: { step: 0.01 },
+      y: { step: 0.01 },
     },
     scene: {
       value: "simple",
