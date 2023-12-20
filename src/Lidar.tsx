@@ -34,7 +34,6 @@ const render = (
   resolution: number,
   points: Array<Vector3>,
   lidarDirection: Vector3,
-  size: number,
   range: number,
   position: Vector3
 ): Array<Vector4> => {
@@ -88,11 +87,11 @@ const render = (
 
     const xOnDepthCameraNearPlane =
       Math.sin(horizontalAngle) *
-      (size / Math.cos(horizontalAngle)) *
+      (0.5 / Math.cos(horizontalAngle)) *
       horizontalDirection;
     const yOnDepthCameraNearPlane =
       Math.sin(verticalAngle) *
-      (size / Math.cos(verticalAngle)) *
+      (0.5 / Math.cos(verticalAngle)) *
       verticalDirection;
 
     const x = Math.round((xOnDepthCameraNearPlane + 0.5) * resolution);
@@ -156,11 +155,9 @@ const Lidar = ({
   const topDepthCameraRef = useRef<PerspectiveCamera>(null);
   const bottomDepthCameraRef = useRef<PerspectiveCamera>(null);
 
-  const lidarRadius = size / 2;
-
   const lidar = useMemo(() => {
     const lidar = new SphereGeometry(
-      lidarRadius,
+      size / 2,
       resolution * 2,
       resolution / 2,
       0,
@@ -170,7 +167,7 @@ const Lidar = ({
     );
 
     return lidar;
-  }, [lidarRadius, resolution]);
+  }, [size, resolution]);
 
   const points = useMemo(() => {
     const points: Array<Vector3> = [];
@@ -223,7 +220,6 @@ const Lidar = ({
           resolution,
           points,
           lidarDirection,
-          size,
           range,
           position
         )
@@ -239,7 +235,6 @@ const Lidar = ({
           resolution,
           points,
           lidarDirection,
-          size,
           range,
           position
         )
@@ -255,7 +250,6 @@ const Lidar = ({
           resolution,
           points,
           lidarDirection,
-          size,
           range,
           position
         )
@@ -271,7 +265,6 @@ const Lidar = ({
           resolution,
           points,
           lidarDirection,
-          size,
           range,
           position
         )
@@ -287,7 +280,6 @@ const Lidar = ({
           resolution,
           points,
           lidarDirection,
-          size,
           range,
           position
         )
@@ -304,7 +296,6 @@ const Lidar = ({
           resolution,
           points,
           lidarDirection,
-          size,
           range,
           position
         )
@@ -318,7 +309,6 @@ const Lidar = ({
     position,
     points,
     lidarDirection,
-    lidarRadius,
     size,
     raycaster.ray,
     resolution,

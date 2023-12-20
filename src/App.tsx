@@ -122,7 +122,7 @@ const Scene = () => {
         resolution={lidarResolution}
         position={new Vector3(lidarPosition.x, 0, lidarPosition.y)}
         rotation={lidarRotation}
-        size={0.5}
+        size={0.1}
         range={4.2}
         debug={debug}
       />
