@@ -107,9 +107,7 @@ const render = (
       return points;
     }
 
-    const maxDistance =
-      range / Math.cos(Math.PI * 0.25) / Math.cos(Math.PI * 0.25);
-    const distance = coordinates.w * maxDistance;
+    const distance = coordinates.w * range;
     const angle = lidarDirection.angleTo(point);
     const z = Math.cos(angle) * -distance;
 

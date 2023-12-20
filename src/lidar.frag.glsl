@@ -9,9 +9,7 @@ float near = 0.5;
 float far = 4.2;
 
 void main() {
-    float maxDistance = (far / cos(angle)) / cos(angle);
-
     float distanceFromCamera = distance(cameraPosition, vertexWorldPosition.xyz);
 
-    gl_FragColor = vec4(distanceFromCamera / maxDistance);
+    gl_FragColor = vec4(distanceFromCamera / far);
 }
