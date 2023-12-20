@@ -1,4 +1,4 @@
-import { Vector3, Euler, BufferGeometry } from "three";
+import { Vector3, Euler, BufferGeometry, Color } from "three";
 import { Canvas } from "@react-three/fiber";
 import { Box, OrbitControls, Plane } from "@react-three/drei";
 import Lidar from "./Lidar";
@@ -118,8 +118,16 @@ const Deck = () => {
           castShadow
           angle={Math.PI / 2}
           penumbra={0.1}
+          decay={2.5}
+          distance={2}
+          color={new Color(0x9999ff)}
         />
       )}
+      <ambientLight intensity={0.1} color={new Color(0x9999ff)} />
+
+      <Box args={[0.5, 0.5, 0.5]} position={[0, 0.25, 0]}>
+        <meshStandardMaterial color={floorMaterials.DarkGrey.color} />
+      </Box>
 
       {Object.entries<Node>(floorNodes).map(([key, node]) => (
         <mesh key={key} geometry={node.geometry} castShadow receiveShadow>
@@ -148,7 +156,7 @@ const Deck = () => {
               key === "Plane063_1"
                 ? wall1Materials.Accent.color
                 : key === "Plane063_2"
-                ? "white"
+                ? "black"
                 : key === "Plane063_3"
                 ? wall1Materials.DarkGrey.color
                 : wall1Materials.Main.color
@@ -172,7 +180,7 @@ const Deck = () => {
               key === "Plane050_1"
                 ? wall2Materials.Accent.color
                 : key === "Plane050_2"
-                ? "white"
+                ? "black"
                 : key === "Plane050_3"
                 ? wall2Materials.DarkGrey.color
                 : key === "Plane050_4"
@@ -256,9 +264,16 @@ const Scene = () => {
           )
         }
         sensorRotation={lidarRotation}
-        displayPosition={lidarDisplayPosition}
+        displayPosition={
+          new Vector3(
+            lidarDisplayPosition.x,
+            // Artificial elevation to fake the drone hovering
+            lidarDisplayPosition.y + 0.05,
+            lidarDisplayPosition.z
+          )
+        }
         displayRotation={new Euler(0, 0, 0)}
-        displayScale={0.1}
+        displayScale={0.05}
         size={0.1}
         range={4.2}
         debug={debug}
