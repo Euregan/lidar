@@ -102,11 +102,24 @@ const render = (
       .fromArray(depthValues.slice(offset, offset + 4))
       .divideScalar(255);
 
-    if (isNaN(coordinates.w) || coordinates.w === 0 || coordinates.w === 1) {
+    // This should be matching the packing in the shader
+    const bitShift = new Vector4(
+      1.0 / (256.0 * 256.0 * 256.0),
+      1.0 / (256.0 * 256.0),
+      1.0 / 256.0,
+      1.0
+    );
+    const distanceFromCamera = coordinates.dot(bitShift);
+
+    if (
+      isNaN(distanceFromCamera) ||
+      distanceFromCamera === 0 ||
+      distanceFromCamera === 1
+    ) {
       return points;
     }
 
-    const distance = coordinates.w * range;
+    const distance = distanceFromCamera * range;
     const angle = lidarDirection.angleTo(point);
     const z = Math.cos(angle) * -distance;
 
@@ -121,7 +134,7 @@ const render = (
         finalPointPosition.x + position.x,
         finalPointPosition.y + position.y,
         finalPointPosition.z + position.z,
-        coordinates.w
+        distanceFromCamera
       )
     );
   }, [] as Array<Vector4>);
