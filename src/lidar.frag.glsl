@@ -13,5 +13,5 @@ void main() {
 
     float distanceFromCamera = distance(cameraPosition, vertexWorldPosition.xyz);
 
-    gl_FragColor = vec4(vertexWorldPosition.xyz / maxDistance, distanceFromCamera / maxDistance);
+    gl_FragColor = vec4(distanceFromCamera / maxDistance);
 }

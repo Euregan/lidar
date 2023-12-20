@@ -83,8 +83,8 @@ const render = (
       return points;
     }
 
-    const horizontalDirection = point.x > position.x ? -1 : 1;
-    const verticalDirection = point.y > position.y ? -1 : 1;
+    const horizontalDirection = point.x > 0 ? -1 : 1;
+    const verticalDirection = point.y > 0 ? -1 : 1;
 
     const xOnDepthCameraNearPlane =
       Math.sin(horizontalAngle) *
@@ -121,9 +121,9 @@ const render = (
 
     return points.concat(
       new Vector4(
-        finalPointPosition.x,
-        finalPointPosition.y,
-        finalPointPosition.z,
+        finalPointPosition.x + position.x,
+        finalPointPosition.y + position.y,
+        finalPointPosition.z + position.z,
         coordinates.w
       )
     );
@@ -215,22 +215,6 @@ const Lidar = ({
       bottomDepthCameraRef.current &&
       instancedMeshRef.current
     ) {
-      setFrontPoints(
-        render(
-          instancedMeshRef.current,
-          frontDepthCameraRef.current,
-          scene,
-          gl,
-          renderTarget,
-          resolution,
-          points,
-          lidarDirection,
-          size,
-          range,
-          position
-        )
-      );
-
       setLeftPoints(
         render(
           instancedMeshRef.current,
@@ -299,6 +283,23 @@ const Lidar = ({
         render(
           instancedMeshRef.current,
           bottomDepthCameraRef.current,
+          scene,
+          gl,
+          renderTarget,
+          resolution,
+          points,
+          lidarDirection,
+          size,
+          range,
+          position
+        )
+      );
+
+      // We run it last so we can debug the rendered texture from the front camera
+      setFrontPoints(
+        render(
+          instancedMeshRef.current,
+          frontDepthCameraRef.current,
           scene,
           gl,
           renderTarget,
@@ -506,6 +507,13 @@ const Lidar = ({
         position={position}
         rotation={[rotation.x + Math.PI * 0.5, rotation.y, rotation.z]}
       />
+
+      {debug && (
+        <mesh position={position} rotation={rotation}>
+          <planeGeometry />
+          <meshBasicMaterial map={renderTarget.texture} />
+        </mesh>
+      )}
 
       <instancedMesh
         ref={instancedMeshRef}

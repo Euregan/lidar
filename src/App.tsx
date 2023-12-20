@@ -85,13 +85,22 @@ const Complex = ({ debug }: SceneProps) => (
 );
 
 const Scene = () => {
-  const { debug, lidarResolution, scene } = useControls({
+  const { debug, lidarResolution, scene, lidarPosition } = useControls({
     debug: true,
     lidarResolution: {
       label: "Lidar resolution",
       min: 8,
-      max: 2048,
+      max: 512,
       value: 128,
+    },
+    lidarPosition: {
+      label: "Lidar position",
+      value: {
+        x: 0.5,
+        y: 0,
+      },
+      x: { step: 0.1 },
+      y: { step: 0.1 },
     },
     scene: {
       value: "simple",
@@ -99,7 +108,6 @@ const Scene = () => {
     },
   });
 
-  const lidarPosition = new Vector3(0, 0, 0);
   const lidarRotation = new Euler(0, Math.PI, 0);
 
   return (
@@ -112,7 +120,7 @@ const Scene = () => {
 
       <Lidar
         resolution={lidarResolution}
-        position={lidarPosition}
+        position={new Vector3(lidarPosition.x, 0, lidarPosition.y)}
         rotation={lidarRotation}
         size={0.5}
         range={4.2}
