@@ -35,7 +35,8 @@ const render = (
   points: Array<Vector3>,
   lidarDirection: Vector3,
   range: number,
-  position: Vector3
+  position: Vector3,
+  scale: number
 ): Array<Vector4> => {
   const depthMaterial = new ShaderMaterial({
     vertexShader,
@@ -119,7 +120,7 @@ const render = (
       return points;
     }
 
-    const distance = distanceFromCamera * range;
+    const distance = distanceFromCamera * range * scale;
     const angle = lidarDirection.angleTo(point);
     const z = Math.cos(angle) * -distance;
 
@@ -142,8 +143,11 @@ const render = (
 
 type LidarProps = {
   resolution: number;
-  position: Vector3;
-  rotation: Euler;
+  sensorPosition: Vector3;
+  sensorRotation: Euler;
+  displayPosition: Vector3;
+  displayRotation: Euler;
+  displayScale: number;
   size: number;
   range: number;
   debug?: boolean;
@@ -151,8 +155,10 @@ type LidarProps = {
 
 const Lidar = ({
   resolution,
-  position,
-  rotation,
+  sensorPosition,
+  sensorRotation,
+  displayPosition,
+  displayScale,
   size,
   range,
   debug = false,
@@ -234,7 +240,8 @@ const Lidar = ({
           points,
           lidarDirection,
           range,
-          position
+          displayPosition,
+          displayScale
         )
       );
 
@@ -249,7 +256,8 @@ const Lidar = ({
           points,
           lidarDirection,
           range,
-          position
+          displayPosition,
+          displayScale
         )
       );
 
@@ -264,7 +272,8 @@ const Lidar = ({
           points,
           lidarDirection,
           range,
-          position
+          displayPosition,
+          displayScale
         )
       );
 
@@ -279,7 +288,8 @@ const Lidar = ({
           points,
           lidarDirection,
           range,
-          position
+          displayPosition,
+          displayScale
         )
       );
 
@@ -294,7 +304,8 @@ const Lidar = ({
           points,
           lidarDirection,
           range,
-          position
+          displayPosition,
+          displayScale
         )
       );
 
@@ -310,7 +321,8 @@ const Lidar = ({
           points,
           lidarDirection,
           range,
-          position
+          displayPosition,
+          displayScale
         )
       );
     }
@@ -318,8 +330,9 @@ const Lidar = ({
     gl,
     renderTarget,
     scene,
-    rotation,
-    position,
+    sensorRotation,
+    displayPosition,
+    displayScale,
     points,
     lidarDirection,
     size,
@@ -366,6 +379,7 @@ const Lidar = ({
       for (let i = 0; i < frontPoints.length; i++) {
         const point = frontPoints[i];
         temp.position.set(point.x, point.y, point.z);
+        temp.scale.set(displayScale, displayScale, displayScale);
         temp.updateMatrix();
         temp.quaternion.copy(camera.quaternion);
         instancedMeshRef.current.setMatrixAt(i, temp.matrix);
@@ -377,6 +391,7 @@ const Lidar = ({
       for (let i = 0; i < leftPoints.length; i++) {
         const point = leftPoints[i];
         temp.position.set(point.x, point.y, point.z);
+        temp.scale.set(displayScale, displayScale, displayScale);
         temp.updateMatrix();
         temp.quaternion.copy(camera.quaternion);
         instancedMeshRef.current.setMatrixAt(
@@ -391,6 +406,7 @@ const Lidar = ({
       for (let i = 0; i < rightPoints.length; i++) {
         const point = rightPoints[i];
         temp.position.set(point.x, point.y, point.z);
+        temp.scale.set(displayScale, displayScale, displayScale);
         temp.updateMatrix();
         temp.quaternion.copy(camera.quaternion);
         instancedMeshRef.current.setMatrixAt(
@@ -405,6 +421,7 @@ const Lidar = ({
       for (let i = 0; i < backPoints.length; i++) {
         const point = backPoints[i];
         temp.position.set(point.x, point.y, point.z);
+        temp.scale.set(displayScale, displayScale, displayScale);
         temp.updateMatrix();
         temp.quaternion.copy(camera.quaternion);
         instancedMeshRef.current.setMatrixAt(
@@ -419,6 +436,7 @@ const Lidar = ({
       for (let i = 0; i < topPoints.length; i++) {
         const point = topPoints[i];
         temp.position.set(point.x, point.y, point.z);
+        temp.scale.set(displayScale, displayScale, displayScale);
         temp.updateMatrix();
         temp.quaternion.copy(camera.quaternion);
         instancedMeshRef.current.setMatrixAt(
@@ -441,6 +459,7 @@ const Lidar = ({
       for (let i = 0; i < bottomPoints.length; i++) {
         const point = bottomPoints[i];
         temp.position.set(point.x, point.y, point.z);
+        temp.scale.set(displayScale, displayScale, displayScale);
         temp.updateMatrix();
         temp.quaternion.copy(camera.quaternion);
         instancedMeshRef.current.setMatrixAt(
@@ -475,42 +494,62 @@ const Lidar = ({
       <perspectiveCamera
         ref={frontDepthCameraRef}
         args={[90, 1, size, range]}
-        position={position}
-        rotation={rotation}
+        position={sensorPosition}
+        rotation={sensorRotation}
       />
       <perspectiveCamera
         ref={leftDepthCameraRef}
         args={[90, 1, size, range]}
-        position={position}
-        rotation={[rotation.x, rotation.y + Math.PI * 0.5, rotation.z]}
+        position={sensorPosition}
+        rotation={[
+          sensorRotation.x,
+          sensorRotation.y + Math.PI * 0.5,
+          sensorRotation.z,
+        ]}
       />
       <perspectiveCamera
         ref={rightDepthCameraRef}
         args={[90, 1, size, range]}
-        position={position}
-        rotation={[rotation.x, rotation.y + Math.PI * -0.5, rotation.z]}
+        position={sensorPosition}
+        rotation={[
+          sensorRotation.x,
+          sensorRotation.y + Math.PI * -0.5,
+          sensorRotation.z,
+        ]}
       />
       <perspectiveCamera
         ref={backDepthCameraRef}
         args={[90, 1, size, range]}
-        position={position}
-        rotation={[rotation.x, rotation.y + Math.PI, rotation.z]}
+        position={sensorPosition}
+        rotation={[
+          sensorRotation.x,
+          sensorRotation.y + Math.PI,
+          sensorRotation.z,
+        ]}
       />
       <perspectiveCamera
         ref={topDepthCameraRef}
         args={[90, 1, size, range]}
-        position={position}
-        rotation={[rotation.x + Math.PI * -0.5, rotation.y, rotation.z]}
+        position={sensorPosition}
+        rotation={[
+          sensorRotation.x + Math.PI * -0.5,
+          sensorRotation.y,
+          sensorRotation.z,
+        ]}
       />
       <perspectiveCamera
         ref={bottomDepthCameraRef}
         args={[90, 1, size, range]}
-        position={position}
-        rotation={[rotation.x + Math.PI * 0.5, rotation.y, rotation.z]}
+        position={sensorPosition}
+        rotation={[
+          sensorRotation.x + Math.PI * 0.5,
+          sensorRotation.y,
+          sensorRotation.z,
+        ]}
       />
 
       {debug && (
-        <mesh position={position} rotation={rotation}>
+        <mesh position={sensorPosition} rotation={sensorRotation}>
           <planeGeometry />
           <meshBasicMaterial map={renderTarget.texture} />
         </mesh>

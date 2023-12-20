@@ -1,8 +1,10 @@
-import { Vector3, Euler, NoToneMapping } from "three";
+import { Vector3, Euler, BufferGeometry } from "three";
 import { Canvas } from "@react-three/fiber";
 import { Box, OrbitControls, Plane } from "@react-three/drei";
 import Lidar from "./Lidar";
 import { useControls } from "leva";
+import { useGLTF } from "@react-three/drei";
+import { useRef } from "react";
 
 type SceneProps = {
   debug: boolean;
@@ -84,6 +86,127 @@ const Complex = ({ debug }: SceneProps) => (
   </>
 );
 
+const lidarDisplayPosition = new Vector3(0, 0.5, 0);
+
+type Node = {
+  geometry: BufferGeometry;
+};
+
+const Deck = () => {
+  // @ts-expect-error The GLTF type is wrong 🤷
+  const { nodes: floorNodes, materials: floorMaterials } =
+    useGLTF("/floor.glb");
+  // @ts-expect-error The GLTF type is wrong 🤷
+  const { nodes: wall1Nodes, materials: wall1Materials } =
+    useGLTF("/wall_1.glb");
+  // @ts-expect-error The GLTF type is wrong 🤷
+  const { nodes: wall2Nodes, materials: wall2Materials } =
+    useGLTF("/wall_2.glb");
+  // @ts-expect-error The GLTF type is wrong 🤷
+  const { nodes: columnNodes, materials: columnMaterials } =
+    useGLTF("/column.glb");
+
+  const targetRef = useRef(null);
+
+  return (
+    <group>
+      <object3D ref={targetRef} position={[0, 10, 0]} />
+      {targetRef.current && (
+        <spotLight
+          position={lidarDisplayPosition}
+          target={targetRef.current}
+          castShadow
+          angle={Math.PI / 2}
+          penumbra={0.1}
+        />
+      )}
+
+      {Object.entries<Node>(floorNodes).map(([key, node]) => (
+        <mesh key={key} geometry={node.geometry} castShadow receiveShadow>
+          <meshStandardMaterial
+            color={
+              key !== "Plane014_1"
+                ? floorMaterials.Main.color
+                : floorMaterials.DarkGrey.color
+            }
+          />
+        </mesh>
+      ))}
+
+      {Object.entries<Node>(wall1Nodes).map(([key, node]) => (
+        <mesh
+          key={key}
+          geometry={node.geometry}
+          rotation={[0, Math.PI, 0]}
+          position={[0, 0, 1]}
+          scale={0.5}
+          castShadow
+          receiveShadow
+        >
+          <meshStandardMaterial
+            color={
+              key === "Plane063_1"
+                ? wall1Materials.Accent.color
+                : key === "Plane063_2"
+                ? "white"
+                : key === "Plane063_3"
+                ? wall1Materials.DarkGrey.color
+                : wall1Materials.Main.color
+            }
+          />
+        </mesh>
+      ))}
+
+      {Object.entries<Node>(wall2Nodes).map(([key, node]) => (
+        <mesh
+          key={key}
+          geometry={node.geometry}
+          rotation={[0, Math.PI * 0.5, 0]}
+          position={[-1, 0, 0]}
+          scale={0.5}
+          castShadow
+          receiveShadow
+        >
+          <meshStandardMaterial
+            color={
+              key === "Plane050_1"
+                ? wall2Materials.Accent.color
+                : key === "Plane050_2"
+                ? "white"
+                : key === "Plane050_3"
+                ? wall2Materials.DarkGrey.color
+                : key === "Plane050_4"
+                ? wall2Materials.DarkGrey.color
+                : key === "Plane050_5"
+                ? wall2Materials.DarkGrey.color
+                : wall2Materials.Main.color
+            }
+          />
+        </mesh>
+      ))}
+
+      {Object.entries<Node>(columnNodes).map(([key, node]) => (
+        <mesh
+          key={key}
+          geometry={node.geometry}
+          position={[-1, 0, 1]}
+          scale={0.5}
+          castShadow
+          receiveShadow
+        >
+          <meshStandardMaterial
+            color={
+              key === "Plane266"
+                ? columnMaterials.DarkGrey.color
+                : columnMaterials.Main.color
+            }
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 const Scene = () => {
   const { debug, lidarResolution, scene, lidarPosition } = useControls({
     debug: true,
@@ -103,25 +226,39 @@ const Scene = () => {
       y: { step: 0.01 },
     },
     scene: {
-      value: "simple",
+      value: "complex",
       options: ["none", "simple", "pilar", "wall", "floor", "complex"],
     },
   });
 
   const lidarRotation = new Euler(0, Math.PI, 0);
+  const scenePosition = new Vector3(0, 0, 10);
 
   return (
     <>
-      {scene === "simple" && <Simple debug={debug} />}
-      {scene === "pilar" && <Pilar debug={debug} />}
-      {scene === "wall" && <Wall debug={debug} />}
-      {scene === "floor" && <Floor debug={debug} />}
-      {scene === "complex" && <Complex debug={debug} />}
+      <group position={scenePosition}>
+        {scene === "simple" && <Simple debug={debug} />}
+        {scene === "pilar" && <Pilar debug={debug} />}
+        {scene === "wall" && <Wall debug={debug} />}
+        {scene === "floor" && <Floor debug={debug} />}
+        {scene === "complex" && <Complex debug={debug} />}
+      </group>
+
+      <Deck />
 
       <Lidar
         resolution={lidarResolution}
-        position={new Vector3(lidarPosition.x, 0, lidarPosition.y)}
-        rotation={lidarRotation}
+        sensorPosition={
+          new Vector3(
+            lidarPosition.x + scenePosition.x,
+            scenePosition.y,
+            lidarPosition.y + scenePosition.z
+          )
+        }
+        sensorRotation={lidarRotation}
+        displayPosition={lidarDisplayPosition}
+        displayRotation={new Euler(0, 0, 0)}
+        displayScale={0.1}
         size={0.1}
         range={4.2}
         debug={debug}
@@ -131,13 +268,8 @@ const Scene = () => {
 };
 
 const App = () => (
-  <Canvas
-    gl={{
-      // We remove the default tone mapping to fully control the colors
-      toneMapping: NoToneMapping,
-    }}
-  >
-    <OrbitControls />
+  <Canvas shadows>
+    <OrbitControls target={lidarDisplayPosition} />
     <Scene />
   </Canvas>
 );
