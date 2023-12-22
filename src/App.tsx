@@ -1,6 +1,6 @@
-import { Vector3, Euler, BufferGeometry, Color } from "three";
+import { Vector3, Euler, BufferGeometry, Color, RepeatWrapping } from "three";
 import { Canvas } from "@react-three/fiber";
-import { Box, OrbitControls, Plane } from "@react-three/drei";
+import { Box, OrbitControls, Plane, useTexture } from "@react-three/drei";
 import Lidar from "./Lidar";
 import { useControls } from "leva";
 import { useGLTF } from "@react-three/drei";
@@ -92,19 +92,49 @@ type Node = {
   geometry: BufferGeometry;
 };
 
-const Deck = () => {
+const Deck = ({ debug }: SceneProps) => {
   // @ts-expect-error The GLTF type is wrong 🤷
   const { nodes: floorNodes, materials: floorMaterials } =
     useGLTF("/floor.glb");
   // @ts-expect-error The GLTF type is wrong 🤷
-  const { nodes: wall1Nodes, materials: wall1Materials } =
-    useGLTF("/wall_1.glb");
-  // @ts-expect-error The GLTF type is wrong 🤷
-  const { nodes: wall2Nodes, materials: wall2Materials } =
-    useGLTF("/wall_2.glb");
+  const { nodes: wallNodes, materials: wallMaterials } = useGLTF("/wall.glb");
   // @ts-expect-error The GLTF type is wrong 🤷
   const { nodes: columnNodes, materials: columnMaterials } =
     useGLTF("/column.glb");
+
+  const paddedTextures = useTexture(
+    {
+      diffuse: "/padded_diffuse.jpg",
+      ambientOcclusion: "/padded_ao.jpg",
+      metalness: "/padded_metallic.jpg",
+      roughness: "/padded_roughness.jpg",
+      normal: "/padded_normal.jpg",
+      height: "/padded_height.png",
+    },
+    (textures) => {
+      (Array.isArray(textures) ? textures : [textures]).forEach((texture) => {
+        texture.wrapS = RepeatWrapping;
+        texture.wrapT = RepeatWrapping;
+      });
+    }
+  );
+
+  const metalTextures = useTexture(
+    {
+      diffuse: "/metal_diffuse.jpg",
+      ambientOcclusion: "/metal_ao.jpg",
+      metalness: "/metal_metallic.jpg",
+      roughness: "/metal_roughness.jpg",
+      normal: "/metal_normal.jpg",
+      height: "/metal_height.png",
+    },
+    (textures) => {
+      (Array.isArray(textures) ? textures : [textures]).forEach((texture) => {
+        texture.wrapS = RepeatWrapping;
+        texture.wrapT = RepeatWrapping;
+      });
+    }
+  );
 
   const targetRef = useRef(null);
 
@@ -121,12 +151,23 @@ const Deck = () => {
           decay={2.5}
           distance={2}
           color={new Color(0x9999ff)}
+          intensity={debug ? 3 : 2}
         />
       )}
-      <ambientLight intensity={0.1} color={new Color(0x9999ff)} />
+      {
+        <ambientLight
+          intensity={debug ? 0.5 : 0.1}
+          color={new Color(debug ? 0xffffff : 0x9999ff)}
+        />
+      }
 
       <Box args={[0.5, 0.5, 0.5]} position={[0, 0.25, 0]}>
-        <meshStandardMaterial color={floorMaterials.DarkGrey.color} />
+        <meshStandardMaterial
+          color={floorMaterials.DarkGrey.color}
+          map={paddedTextures.diffuse}
+          aoMap={paddedTextures.ambientOcclusion}
+          normalMap={paddedTextures.normal}
+        />
       </Box>
 
       {Object.entries<Node>(floorNodes).map(([key, node]) => (
@@ -141,7 +182,7 @@ const Deck = () => {
         </mesh>
       ))}
 
-      {Object.entries<Node>(wall1Nodes).map(([key, node]) => (
+      {Object.entries<Node>(wallNodes).map(([key, node]) => (
         <mesh
           key={key}
           geometry={node.geometry}
@@ -152,20 +193,43 @@ const Deck = () => {
           receiveShadow
         >
           <meshStandardMaterial
+            map={
+              key === "Plane111_1"
+                ? paddedTextures.diffuse
+                : metalTextures.diffuse
+            }
+            aoMap={
+              key === "Plane111_1"
+                ? paddedTextures.ambientOcclusion
+                : metalTextures.ambientOcclusion
+            }
+            normalMap={
+              key === "Plane111_1"
+                ? paddedTextures.normal
+                : metalTextures.normal
+            }
+            roughnessMap={
+              key === "Plane111_1"
+                ? paddedTextures.roughness
+                : metalTextures.roughness
+            }
+            metalnessMap={
+              key === "Plane111_1"
+                ? paddedTextures.metalness
+                : metalTextures.metalness
+            }
             color={
-              key === "Plane063_1"
-                ? wall1Materials.Accent.color
-                : key === "Plane063_2"
+              key === "Plane111_2"
                 ? "black"
-                : key === "Plane063_3"
-                ? wall1Materials.DarkGrey.color
-                : wall1Materials.Main.color
+                : key === "Plane111_3"
+                ? wallMaterials.DarkGrey.color
+                : "white"
             }
           />
         </mesh>
       ))}
 
-      {Object.entries<Node>(wall2Nodes).map(([key, node]) => (
+      {Object.entries<Node>(wallNodes).map(([key, node]) => (
         <mesh
           key={key}
           geometry={node.geometry}
@@ -176,18 +240,37 @@ const Deck = () => {
           receiveShadow
         >
           <meshStandardMaterial
+            map={
+              key === "Plane111_1"
+                ? paddedTextures.diffuse
+                : metalTextures.diffuse
+            }
+            aoMap={
+              key === "Plane111_1"
+                ? paddedTextures.ambientOcclusion
+                : metalTextures.ambientOcclusion
+            }
+            normalMap={
+              key === "Plane111_1"
+                ? paddedTextures.normal
+                : metalTextures.normal
+            }
+            roughnessMap={
+              key === "Plane111_1"
+                ? paddedTextures.roughness
+                : metalTextures.roughness
+            }
+            metalnessMap={
+              key === "Plane111_1"
+                ? paddedTextures.metalness
+                : metalTextures.metalness
+            }
             color={
-              key === "Plane050_1"
-                ? wall2Materials.Accent.color
-                : key === "Plane050_2"
+              key === "Plane111_2"
                 ? "black"
-                : key === "Plane050_3"
-                ? wall2Materials.DarkGrey.color
-                : key === "Plane050_4"
-                ? wall2Materials.DarkGrey.color
-                : key === "Plane050_5"
-                ? wall2Materials.DarkGrey.color
-                : wall2Materials.Main.color
+                : key === "Plane111_3"
+                ? wallMaterials.DarkGrey.color
+                : "white"
             }
           />
         </mesh>
@@ -252,7 +335,7 @@ const Scene = () => {
         {scene === "complex" && <Complex debug={debug} />}
       </group>
 
-      <Deck />
+      <Deck debug={debug} />
 
       <Lidar
         resolution={lidarResolution}
