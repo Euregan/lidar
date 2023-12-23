@@ -130,7 +130,7 @@ const render = (
       z
     ).applyQuaternion(depthCamera.quaternion);
 
-    return points.concat(
+    points.push(
       new Vector4(
         finalPointPosition.x + position.x,
         finalPointPosition.y + position.y,
@@ -138,6 +138,8 @@ const render = (
         distanceFromCamera
       )
     );
+
+    return points;
   }, [] as Array<Vector4>);
 };
 
