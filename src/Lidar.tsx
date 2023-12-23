@@ -228,14 +228,20 @@ const Lidar = ({
 
   const sidePoints = useMemo(
     () =>
-      points.filter(
-        (point) =>
+      points.filter((point) => {
+        const horizontalAngle = new Vector3(0, 0, 1).angleTo(
+          new Vector3(point.x, 0, point.z)
+        );
+
+        return (
           point.z > 0 &&
-          new Vector3(0, 0, 1).angleTo(new Vector3(point.x, 0, point.z)) <=
-            Math.PI * 0.25 &&
-          new Vector3(0, 0, 1).angleTo(new Vector3(0, point.y, point.z)) <=
+          (horizontalAngle < Math.PI * 0.25 ||
+            // Dirty round up to prevent holes between sides
+            (point.x > 0 && horizontalAngle <= Math.PI * 0.251)) &&
+          new Vector3(0, 0, 1).angleTo(new Vector3(0, point.y, point.z)) <
             Math.PI * 0.25
-      ),
+        );
+      }),
     [points]
   );
   const verticalPoints = useMemo(
