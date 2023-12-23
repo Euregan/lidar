@@ -2,7 +2,7 @@ import { Vector3, Euler, BufferGeometry, Color, RepeatWrapping } from "three";
 import { Canvas } from "@react-three/fiber";
 import { Box, OrbitControls, Plane, useTexture } from "@react-three/drei";
 import Lidar from "./Lidar";
-import { useControls } from "leva";
+import { Leva, useControls } from "leva";
 import { useGLTF } from "@react-three/drei";
 import { useRef } from "react";
 
@@ -300,7 +300,7 @@ const Deck = ({ debug }: SceneProps) => {
 
 const Scene = () => {
   const { debug, lidarResolution, scene, lidarPosition } = useControls({
-    debug: true,
+    debug: import.meta.env.MODE !== "production",
     lidarResolution: {
       label: "Lidar resolution",
       min: 8,
@@ -366,7 +366,10 @@ const Scene = () => {
 };
 
 const App = () => (
-  <Canvas shadows>
+  <Canvas shadows camera={{ position: [0.2, 0.7, -0.2] }}>
+    {/* Small hack because Vite crashes when passing hidden={false} */}
+    {import.meta.env.MODE === "production" && <Leva hidden />}
+
     <OrbitControls target={lidarDisplayPosition} />
     <Scene />
   </Canvas>
