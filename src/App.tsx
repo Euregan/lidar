@@ -1,10 +1,18 @@
-import { Vector3, Euler, BufferGeometry, Color, RepeatWrapping } from "three";
+import {
+  Vector3,
+  Euler,
+  BufferGeometry,
+  Color,
+  RepeatWrapping,
+  Object3D,
+  Object3DEventMap,
+} from "three";
 import { Canvas } from "@react-three/fiber";
 import { Box, OrbitControls, Plane, useTexture } from "@react-three/drei";
 import Lidar from "./Lidar";
 import { Leva, useControls } from "leva";
 import { useGLTF } from "@react-three/drei";
-import { useRef } from "react";
+import { useState } from "react";
 
 type SceneProps = {
   debug: boolean;
@@ -136,15 +144,17 @@ const Deck = ({ debug }: SceneProps) => {
     }
   );
 
-  const targetRef = useRef(null);
+  const [targetRef, setTargetRef] = useState<null | Object3D<Object3DEventMap>>(
+    null
+  );
 
   return (
     <group>
-      <object3D ref={targetRef} position={[0, 10, 0]} />
-      {targetRef.current && (
+      <object3D ref={setTargetRef} position={[0, 10, 0]} />
+      {targetRef && (
         <spotLight
           position={lidarDisplayPosition}
-          target={targetRef.current}
+          target={targetRef}
           castShadow
           angle={Math.PI / 2}
           penumbra={0.1}
