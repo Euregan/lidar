@@ -70,18 +70,12 @@ const render = (
       0,
       lidarDirection.z
     ).angleTo(new Vector3(point.x, 0, point.z));
-    if (horizontalAngle > Math.PI * 0.25) {
-      return points;
-    }
 
     const verticalAngle = new Vector3(
       0,
       lidarDirection.y,
       lidarDirection.z
     ).angleTo(new Vector3(0, point.y, point.z));
-    if (verticalAngle > Math.PI * 0.25) {
-      return points;
-    }
 
     const horizontalDirection = point.x > 0 ? -1 : 1;
     const verticalDirection = point.y > 0 ? -1 : 1;
@@ -183,7 +177,7 @@ const Lidar = ({
       resolution / 2,
       0,
       Math.PI * 2,
-      Math.PI * 0.25,
+      Math.PI * 0.2,
       Math.PI - Math.PI * 0.4
     );
 
@@ -220,6 +214,45 @@ const Lidar = ({
     [resolution]
   );
 
+  const sidePoints = useMemo(
+    () =>
+      points.filter(
+        (point) =>
+          point.z > 0 &&
+          new Vector3(0, 0, 1).angleTo(new Vector3(point.x, 0, point.z)) <=
+            Math.PI * 0.25 &&
+          new Vector3(0, 0, 1).angleTo(new Vector3(0, point.y, point.z)) <=
+            Math.PI * 0.25
+      ),
+    [points]
+  );
+  const verticalPoints = useMemo(
+    () =>
+      points
+        .filter((point) => {
+          if (point.y < 0) {
+            return false;
+          }
+
+          const verticalAngle = new Vector3(0, 0, 1).angleTo(
+            new Vector3(0, point.y, point.z)
+          );
+
+          const otherAngle = new Vector3(1, 0, 0).angleTo(
+            new Vector3(point.x, point.y, 0)
+          );
+
+          return (
+            otherAngle >= Math.PI * 0.25 &&
+            otherAngle <= Math.PI * 0.75 &&
+            verticalAngle >= Math.PI * 0.25 &&
+            verticalAngle <= Math.PI * 0.75
+          );
+        })
+        .map((point) => point.applyEuler(new Euler(Math.PI * 0.5, 0, 0))),
+    [points]
+  );
+
   useEffect(() => {
     // This is where we update the LIDAR points position
     if (
@@ -239,7 +272,7 @@ const Lidar = ({
           gl,
           renderTarget,
           resolution,
-          points,
+          sidePoints,
           lidarDirection,
           range,
           displayPosition,
@@ -255,7 +288,7 @@ const Lidar = ({
           gl,
           renderTarget,
           resolution,
-          points,
+          sidePoints,
           lidarDirection,
           range,
           displayPosition,
@@ -271,7 +304,7 @@ const Lidar = ({
           gl,
           renderTarget,
           resolution,
-          points,
+          sidePoints,
           lidarDirection,
           range,
           displayPosition,
@@ -287,7 +320,7 @@ const Lidar = ({
           gl,
           renderTarget,
           resolution,
-          points,
+          verticalPoints,
           lidarDirection,
           range,
           displayPosition,
@@ -303,7 +336,7 @@ const Lidar = ({
           gl,
           renderTarget,
           resolution,
-          points,
+          verticalPoints,
           lidarDirection,
           range,
           displayPosition,
@@ -320,7 +353,7 @@ const Lidar = ({
           gl,
           renderTarget,
           resolution,
-          points,
+          sidePoints,
           lidarDirection,
           range,
           displayPosition,
@@ -342,6 +375,8 @@ const Lidar = ({
     resolution,
     range,
     debug,
+    sidePoints,
+    verticalPoints,
   ]);
 
   useHelper(
