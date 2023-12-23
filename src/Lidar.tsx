@@ -22,6 +22,8 @@ import { useHelper } from "@react-three/drei";
 import vertexShader from "./lidar.vert.glsl";
 import fragmentShader from "./lidar.frag.glsl";
 
+const renderResolutionScale = 8;
+
 const render = (
   instancedMesh: InstancedMesh<
     BufferGeometry<NormalBufferAttributes>,
@@ -51,13 +53,15 @@ const render = (
   gl.setRenderTarget(null);
   scene.overrideMaterial = null;
 
-  const depthValues = new Uint8Array(resolution * resolution * 4);
+  const depthValues = new Uint8Array(
+    resolution * renderResolutionScale * resolution * renderResolutionScale * 4
+  );
   gl.readRenderTargetPixels(
     renderTarget,
     0,
     0,
-    resolution,
-    resolution,
+    resolution * renderResolutionScale,
+    resolution * renderResolutionScale,
     depthValues
   );
 
@@ -89,10 +93,14 @@ const render = (
       (0.5 / Math.cos(verticalAngle)) *
       verticalDirection;
 
-    const x = Math.round((xOnDepthCameraNearPlane + 0.5) * resolution);
-    const y = Math.round((yOnDepthCameraNearPlane + 0.5) * resolution);
+    const x = Math.round(
+      (xOnDepthCameraNearPlane + 0.5) * resolution * renderResolutionScale
+    );
+    const y = Math.round(
+      (yOnDepthCameraNearPlane + 0.5) * resolution * renderResolutionScale
+    );
 
-    const offset = x * 4 + y * resolution * 4;
+    const offset = x * 4 + y * resolution * renderResolutionScale * 4;
     coordinates
       .fromArray(depthValues.slice(offset, offset + 4))
       .divideScalar(255);
@@ -210,7 +218,11 @@ const Lidar = ({
   const [bottomPoints, setBottomPoints] = useState<Array<Vector4>>([]);
 
   const renderTarget = useMemo(
-    () => new WebGLRenderTarget(resolution, resolution),
+    () =>
+      new WebGLRenderTarget(
+        resolution * renderResolutionScale,
+        resolution * renderResolutionScale
+      ),
     [resolution]
   );
 
