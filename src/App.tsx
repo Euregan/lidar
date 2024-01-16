@@ -11,6 +11,7 @@ import { Canvas } from "@react-three/fiber";
 import { Box, OrbitControls, Plane, useTexture } from "@react-three/drei";
 import Lidar from "./Lidar";
 import { Leva, useControls } from "leva";
+import { Perf } from "r3f-perf";
 import { useGLTF } from "@react-three/drei";
 import { useState } from "react";
 
@@ -379,6 +380,7 @@ const App = () => (
   <Canvas shadows camera={{ position: [0.2, 0.7, -0.2] }}>
     {/* Small hack because Vite crashes when passing hidden={false} */}
     {import.meta.env.MODE === "production" && <Leva hidden />}
+    {import.meta.env.MODE === "development" && <Perf position="top-left" />}
 
     <OrbitControls target={lidarDisplayPosition} />
     <Scene />

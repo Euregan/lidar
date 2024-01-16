@@ -1,5 +1,5 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef, useEffect, MutableRefObject, useState } from "react";
+import { useMemo, useRef, MutableRefObject, useState } from "react";
 import {
   WebGLRenderTarget,
   PerspectiveCamera,
@@ -102,7 +102,12 @@ const render = (
 
     const offset = x * 4 + y * resolution * renderResolutionScale * 4;
     coordinates
-      .fromArray(depthValues.slice(offset, offset + 4))
+      .fromArray([
+        depthValues[offset],
+        depthValues[offset + 1],
+        depthValues[offset + 2],
+        depthValues[offset + 3],
+      ])
       .divideScalar(255);
 
     // This should be matching the packing in the shader
@@ -208,7 +213,7 @@ const Lidar = ({
 
   const lidarDirection = useMemo(() => new Vector3(0, 0, 1), []);
 
-  const { gl, scene, raycaster, camera } = useThree();
+  const { gl, scene, camera } = useThree();
 
   const [frontPoints, setFrontPoints] = useState<Array<Vector4>>([]);
   const [leftPoints, setLeftPoints] = useState<Array<Vector4>>([]);
@@ -271,7 +276,29 @@ const Lidar = ({
     [points]
   );
 
-  useEffect(() => {
+  useHelper(
+    debug
+      ? (frontDepthCameraRef as MutableRefObject<PerspectiveCamera>)
+      : false,
+    CameraHelper
+  );
+  useHelper(
+    debug ? (leftDepthCameraRef as MutableRefObject<PerspectiveCamera>) : false,
+    CameraHelper
+  );
+  useHelper(
+    debug
+      ? (rightDepthCameraRef as MutableRefObject<PerspectiveCamera>)
+      : false,
+    CameraHelper
+  );
+  useHelper(
+    debug ? (backDepthCameraRef as MutableRefObject<PerspectiveCamera>) : false,
+    CameraHelper
+  );
+
+  // TODO: Replace part of this with a billboard vertex shader
+  useFrame(() => {
     // This is where we update the LIDAR points position
     if (
       frontDepthCameraRef.current &&
@@ -379,47 +406,7 @@ const Lidar = ({
         )
       );
     }
-  }, [
-    gl,
-    renderTarget,
-    scene,
-    sensorRotation,
-    displayPosition,
-    displayScale,
-    points,
-    lidarDirection,
-    size,
-    raycaster.ray,
-    resolution,
-    range,
-    debug,
-    sidePoints,
-    verticalPoints,
-  ]);
 
-  useHelper(
-    debug
-      ? (frontDepthCameraRef as MutableRefObject<PerspectiveCamera>)
-      : false,
-    CameraHelper
-  );
-  useHelper(
-    debug ? (leftDepthCameraRef as MutableRefObject<PerspectiveCamera>) : false,
-    CameraHelper
-  );
-  useHelper(
-    debug
-      ? (rightDepthCameraRef as MutableRefObject<PerspectiveCamera>)
-      : false,
-    CameraHelper
-  );
-  useHelper(
-    debug ? (backDepthCameraRef as MutableRefObject<PerspectiveCamera>) : false,
-    CameraHelper
-  );
-
-  // TODO: Replace part of this with a billboard vertex shader
-  useFrame(() => {
     if (instancedMeshRef.current) {
       const temp = new Object3D();
 
